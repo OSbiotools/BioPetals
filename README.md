@@ -1,39 +1,16 @@
 <p align="center">
     <img src="https://i.imgur.com/7eR7Pan.png" width="400"><br>
-    Run large language models at home, BitTorrent-style.<br>
-    Fine-tuning and inference <a href="https://github.com/bigscience-workshop/petals#benchmarks">up to 10x faster</a> than offloading
+    Run a biology-focused LLM on your own network.<br>
+    Distributed inference and fine-tuning powered by Petals.<br>
     <br><br>
     <a href="https://pypi.org/project/petals/"><img src="https://img.shields.io/pypi/v/petals.svg?color=green"></a>
     <a href="https://discord.gg/tfHfe8B34k"><img src="https://img.shields.io/discord/865254854262652969?label=discord&logo=discord&logoColor=white"></a>
     <br>
 </p>
 
-Generate text with distributed **Llama 3.1** (up to 405B), **Mixtral** (8x22B), **Falcon** (40B+) or **BLOOM** (176B) and fine‑tune them for your own tasks &mdash; right from your desktop computer or Google Colab:
+## Biology Model (OpenBioLLM)
 
-```python
-from transformers import AutoTokenizer
-from petals import AutoDistributedModelForCausalLM
-
-# Choose any model available at https://health.petals.dev
-model_name = "meta-llama/Meta-Llama-3.1-405B-Instruct"
-
-# Connect to a distributed network hosting model layers
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoDistributedModelForCausalLM.from_pretrained(model_name)
-
-# Run the model as if it were on your computer
-inputs = tokenizer("A cat sat", return_tensors="pt")["input_ids"]
-outputs = model.generate(inputs, max_new_tokens=5)
-print(tokenizer.decode(outputs[0]))  # A cat sat on a mat...
-```
-
-<p align="center">
-    🚀 &nbsp;<b><a href="https://colab.research.google.com/drive/1uCphNY7gfAUkdDrTx21dZZwCOUDCMPw8?usp=sharing">Try now in Colab</a></b>
-</p>
-
-## Biology quickstart (OpenBioLLM)
-
-Petals includes a convenience loader for a biology-oriented checkpoint, [aaditya/Llama3-OpenBioLLM-8B](https://huggingface.co/aaditya/Llama3-OpenBioLLM-8B), which is compatible with Petals because it uses the `llama` architecture.
+BioPetals is a specialized fork of Petals for [aaditya/Llama3-OpenBioLLM-8B](https://huggingface.co/aaditya/Llama3-OpenBioLLM-8B), a biology-oriented LLM built on the Llama 3 architecture. Run it distributed across your own network for fast inference and fine-tuning.
 
 ```python
 from petals.client import load_biology_model
@@ -73,47 +50,47 @@ Host this biology checkpoint in Petals:
 python -m petals.cli.run_server aaditya/Llama3-OpenBioLLM-8B
 ```
 
-If there are no public peers for this model, start your own swarm and connect clients to it. See the [Launch a private swarm](https://github.com/bigscience-workshop/petals/wiki/Launch-your-own-swarm) guide.
 
-🦙 **Want to run Llama?** [Request access](https://huggingface.co/meta-llama/Meta-Llama-3.1-405B-Instruct) to its weights, then run `huggingface-cli login` in the terminal before loading the model. Or just try it in our [chatbot app](https://chat.petals.dev).
 
-🔏 **Privacy.** Your data will be processed with the help of other people in the public swarm. Learn more about privacy [here](https://github.com/bigscience-workshop/petals/wiki/Security,-privacy,-and-AI-safety). For sensitive data, you can set up a [private swarm](https://github.com/bigscience-workshop/petals/wiki/Launch-your-own-swarm) among people you trust.
+### Private biology-only swarm
 
-💬 **Any questions?** Ping us in [our Discord](https://discord.gg/KdThf2bWVU)!
-
-## Connect your GPU and increase Petals capacity
-
-Petals is a community-run system &mdash; we rely on people sharing their GPUs. You can help serving one of the [available models](https://health.petals.dev) or host a new model from 🤗 [Model Hub](https://huggingface.co/models)!
-
-As an example, here is how to host a part of [Llama 3.1 (405B) Instruct](https://huggingface.co/meta-llama/Meta-Llama-3.1-405B-Instruct) on your GPU:
-
-🦙 **Want to host Llama?** [Request access](https://huggingface.co/meta-llama/Meta-Llama-3.1-405B-Instruct) to its weights, then run `huggingface-cli login` in the terminal before loading the model.
-
-🐧 **Linux + Anaconda.** Run these commands for NVIDIA GPUs (or follow [this](https://github.com/bigscience-workshop/petals/wiki/Running-on-AMD-GPU) for AMD):
+To run a network that serves only the biology checkpoint, start one or more servers announcing that model and do not connect to the public swarm (use `--new_swarm`). The simplest option is the bundled helper:
 
 ```bash
-conda install pytorch pytorch-cuda=11.7 -c pytorch -c nvidia
-pip install git+https://github.com/bigscience-workshop/petals
-python -m petals.cli.run_server meta-llama/Meta-Llama-3.1-405B-Instruct
+./examples/run_bio_server.sh --num-blocks 8 --port 31337
 ```
 
-🪟 **Windows + WSL.** Follow [this guide](https://github.com/bigscience-workshop/petals/wiki/Run-Petals-server-on-Windows) on our Wiki.
+- Minimum peers: 1 — a single server that hosts all blocks will make inference possible.
+- Distributed mode: if you split the model across multiple people, you need enough peers to host all model blocks (or fewer peers if each peer hosts multiple blocks). The exact number depends on the model's number of blocks and each peer's GPU memory.
 
-🐋 **Docker.** Run our [Docker](https://www.docker.com) image for NVIDIA GPUs (or follow [this](https://github.com/bigscience-workshop/petals/wiki/Running-on-AMD-GPU) for AMD):
+Recommended: start with one server (or three for redundancy), verify inference locally, then invite more peers if you want to distribute serving across multiple machines.
+
+🔏 **Privacy.** BioPetals is designed for private, community-run swarms. Your data stays within your network. Learn more about security [here](https://github.com/bigscience-workshop/petals/wiki/Security,-privacy,-and-AI-safety).
+
+💬 **Questions?** Open an issue or check the [Petals wiki](https://github.com/bigscience-workshop/petals/wiki).
+
+## Host a Server
+
+BioPetals networks are community-run &mdash; help by sharing your GPU capacity to serve the biology model:
+
+**Access:** The OpenBioLLM model is open-access. Run `huggingface-cli login` if you want to save credentials locally.
+
+**Setup:**
 
 ```bash
-sudo docker run -p 31330:31330 --ipc host --gpus all --volume petals-cache:/cache --rm \
-    learningathome/petals:main \
-    python -m petals.cli.run_server --port 31330 meta-llama/Meta-Llama-3.1-405B-Instruct
+# Linux or macOS
+pip install git+https://github.com/Pranesh950/BioPetals.git
+
+# Join a private swarm
+./examples/run_bio_server.sh --num-blocks 8 --port 31337
 ```
 
-🍏 **macOS + Apple M1/M2 GPU.** Install [Homebrew](https://brew.sh/), then run these commands:
-
+Or manually:
 ```bash
-brew install python
-python3 -m pip install git+https://github.com/bigscience-workshop/petals
-python3 -m petals.cli.run_server meta-llama/Meta-Llama-3.1-405B-Instruct
+python -m petals.cli.run_server aaditya/Llama3-OpenBioLLM-8B --new_swarm --public_ip <YOUR_IP> --port 31337
 ```
+
+For **Windows**, AMD GPUs, Docker, or multi-GPU setups, see the [Petals wiki](https://github.com/bigscience-workshop/petals/wiki/Run-Petals-server-on-Windows) for detailed instructions.
 
 <p align="center">
     📚 &nbsp;<b><a href="https://github.com/bigscience-workshop/petals/wiki/FAQ:-Frequently-asked-questions#running-a-server">Learn more</a></b> (how to use multiple GPUs, start the server on boot, etc.)
@@ -123,12 +100,12 @@ python3 -m petals.cli.run_server meta-llama/Meta-Llama-3.1-405B-Instruct
 
 💬 **Any questions?** Ping us in [our Discord](https://discord.gg/X7DgtxgMhc)!
 
-🏆 **Thank you!** Once you load and host 10+ blocks, we can show your name or link on the [swarm monitor](https://health.petals.dev) as a way to say thanks. You can specify them with `--public_name YOUR_NAME`.
+🏆 **Thank you!** Help maintain the network by hosting blocks. You can optionally specify `--public_name YOUR_NAME` for recognition.
 
 ## How does it work?
 
-- You load a small part of the model, then join a [network](https://health.petals.dev) of people serving the other parts. Single‑batch inference runs at up to **6 tokens/sec** for **Llama 2** (70B) and up to **4 tokens/sec** for **Falcon** (180B) — enough for [chatbots](https://chat.petals.dev) and interactive apps.
-- You can employ any fine-tuning and sampling methods, execute custom paths through the model, or see its hidden states. You get the comforts of an API with the flexibility of **PyTorch** and **🤗 Transformers**.
+- You load a small part of the model locally, while peers host the remaining blocks. Inference runs efficiently across the distributed network.
+- Use any fine-tuning and sampling methods, access hidden states, and enjoy the flexibility of **PyTorch** and **🤗 Transformers** with distributed execution.
 
 <p align="center">
     <img src="https://i.imgur.com/RTYF3yW.png" width="800">
@@ -140,23 +117,16 @@ python3 -m petals.cli.run_server meta-llama/Meta-Llama-3.1-405B-Instruct
     📚 &nbsp;<b><a href="https://github.com/bigscience-workshop/petals/wiki/FAQ:-Frequently-asked-questions">See FAQ</a></b>
 </p>
 
-## 📚 Tutorials, examples, and more
+## 📚 Resources
 
-Basic tutorials:
+**Examples:**
+- Inference script: `examples/run_biology_inference.py`
+- Colab notebook: `examples/run_biology_inference_colab.ipynb`
+- Server helper: `examples/run_bio_server.sh`
 
-- Getting started: [tutorial](https://colab.research.google.com/drive/1uCphNY7gfAUkdDrTx21dZZwCOUDCMPw8?usp=sharing)
-- Prompt-tune Llama-65B for text semantic classification: [tutorial](https://colab.research.google.com/github/bigscience-workshop/petals/blob/main/examples/prompt-tuning-sst2.ipynb)
-- Prompt-tune BLOOM to create a personified chatbot: [tutorial](https://colab.research.google.com/github/bigscience-workshop/petals/blob/main/examples/prompt-tuning-personachat.ipynb)
-
-Useful tools:
-
-- [Chatbot web app](https://chat.petals.dev) (connects to Petals via an HTTP/WebSocket endpoint): [source code](https://github.com/petals-infra/chat.petals.dev)
-- [Monitor](https://health.petals.dev) for the public swarm: [source code](https://github.com/petals-infra/health.petals.dev)
-
-Advanced guides:
-
-- Launch a private swarm: [guide](https://github.com/bigscience-workshop/petals/wiki/Launch-your-own-swarm)
-- Run a custom model: [guide](https://github.com/bigscience-workshop/petals/wiki/Run-a-custom-model-with-Petals)
+**Documentation:**
+- [Petals Wiki](https://github.com/bigscience-workshop/petals/wiki) — general Petals setup, troubleshooting, and advanced configurations
+- [Security & Privacy](https://github.com/bigscience-workshop/petals/wiki/Security,-privacy,-and-AI-safety) — learn how BioPetals keeps your data safe
 
 ### Benchmarks
 
@@ -164,7 +134,7 @@ Please see **Section 3.3** of our [paper](https://arxiv.org/pdf/2209.01188.pdf).
 
 ### 🛠️ Contributing
 
-Please see our [FAQ](https://github.com/bigscience-workshop/petals/wiki/FAQ:-Frequently-asked-questions#contributing) on contributing.
+Contributions are welcome! Please see the [Petals FAQ](https://github.com/bigscience-workshop/petals/wiki/FAQ:-Frequently-asked-questions#contributing) for contribution guidelines, or open an issue to report bugs and suggest features.
 
 ### 📜 Citations
 
